@@ -17,7 +17,7 @@
 *******************************************************************************/
 
 /* ++++++++++  static-vals sub-area  ++++++++++++++++++++++++++++++++++++++++ */
-static std::vector<std::wstring> inZipPath;													//ÓÃÓÚ´æ´¢ÎÄ¼şÏà¶ÔÓÚZIP¸ùÄ¿Â¼µÄÂ·¾¶
+static std::vector<std::wstring> inZipPath;													//ç”¨äºå­˜å‚¨æ–‡ä»¶ç›¸å¯¹äºZIPæ ¹ç›®å½•çš„è·¯å¾„
 
 /*******************************************************************************
 **  AREA3  :   function-bodies area
@@ -31,36 +31,36 @@ static std::vector<std::wstring> inZipPath;													//ÓÃÓÚ´æ´¢ÎÄ¼şÏà¶ÔÓÚZIP¸
 ********************************************************************************
 *
 *   FUNCTION NAME: ExtractZipToDir
-*   Inputs       : unzipSrcPath		zipÎÄ¼şÂ·¾¶
-*   Inputs       : unzipDestPath	½âÑ¹Â·¾¶	Èç¹û´«ÈëNULL Ôò½âÑ¹µ½µ±Ç°Ä¿Â¼
-*   Retrun Value : ZRESULT			´íÎó´úÂë£¬µ±·µ»Ø½á¹ûÎª0Ê±£¬ÆäÎª³É¹¦
+*   Inputs       : unzipSrcPath		zipæ–‡ä»¶è·¯å¾„
+*   Inputs       : unzipDestPath	è§£å‹è·¯å¾„	å¦‚æœä¼ å…¥NULL åˆ™è§£å‹åˆ°å½“å‰ç›®å½•
+*   Retrun Value : ZRESULT			é”™è¯¯ä»£ç ï¼Œå½“è¿”å›ç»“æœä¸º0æ—¶ï¼Œå…¶ä¸ºæˆåŠŸ
 *
 *---------------------------------- PURPOSE -----------------------------------
-*  ¶ÔzipÎÄ¼ş½øĞĞ½âÑ¹
+*  å¯¹zipæ–‡ä»¶è¿›è¡Œè§£å‹
 *******************************************************************************/
-ZRESULT ExtractZipToDir(LPCTSTR unzipSrcPath, LPCTSTR unzipDestPath)
+ZRESULT ExtractZipToDir(LPCTSTR unzipSrcPath, LPCTSTR unzipDestPath, std::string unzipPassword)
 {
 
 #ifndef _UNICODE 
-	// ÅĞ¶ÏÎÄ¼şÊÇ·ñ´æÔÚ
+	// åˆ¤æ–­æ–‡ä»¶æ˜¯å¦å­˜åœ¨
 	if (_access(unzipSrcPath, 0))
 	{
-		printf("Ô´Ä¿Â¼²»´æÔÚ£¬½âÑ¹Ê§°Ü\n", unzipSrcPath);
+		printf("æºç›®å½•ä¸å­˜åœ¨ï¼Œè§£å‹å¤±è´¥\n", unzipSrcPath);
 		return ZR_NOFILE;
 	}
 #else
 	if (_waccess(unzipSrcPath, 0))
 	{
 
-		printf("Ô´Ä¿Â¼²»´æÔÚ£¬½âÑ¹Ê§°Ü\n");
+		printf("æºç›®å½•ä¸å­˜åœ¨ï¼Œè§£å‹å¤±è´¥\n");
 		return ZR_NOFILE;
 	}
 #endif
 
-	DWORD zResult = ZR_OK;																	//·µ»ØÖµ
+	DWORD zResult = ZR_OK;																	//è¿”å›å€¼
 	
-	std::wstring strunzipDestPath;															//ÓÃÓÚ¼ÇÂ¼½âÑ¹Ä¿±êÄ¿Â¼
-	if (unzipDestPath)																		// Èç¹û½âÑ¹Â·¾¶²»´æÔÚÏÈ´´½¨, ´æÔÚ²»×öÈÎºÎĞŞ¸Ä
+	std::wstring strunzipDestPath;															//ç”¨äºè®°å½•è§£å‹ç›®æ ‡ç›®å½•
+	if (unzipDestPath)																		// å¦‚æœè§£å‹è·¯å¾„ä¸å­˜åœ¨å…ˆåˆ›å»º, å­˜åœ¨ä¸åšä»»ä½•ä¿®æ”¹
 	{
 		strunzipDestPath = unzipDestPath;
 		SHCreateDirectoryEx(NULL, unzipDestPath, NULL);
@@ -72,10 +72,15 @@ ZRESULT ExtractZipToDir(LPCTSTR unzipSrcPath, LPCTSTR unzipDestPath)
 		strunzipDestPath = buffer;
 	}
 
-	HZIP hz = OpenZip(unzipSrcPath, 0);														//zip´¦Àí¿ªÊ¼
+	HZIP hz = NULL;
+	if (unzipPassw.empty())
+		hz = OpenZip(unzipSrcPath, 0);														//zipå¤„ç†å¼€å§‹
+	else
+		hz = OpenZip(unzipSrcPath, unzipPassw.data());
+													
 	ZIPENTRY ze;
 
-	GetZipItem(hz, -1, &ze);																//»ñÈ¡Î²½ÚµãĞÅÏ¢
+	GetZipItem(hz, -1, &ze);																//è·å–å°¾èŠ‚ç‚¹ä¿¡æ¯
 	int numitems = ze.index;
 	for (int zi = 0; zi < numitems; zi++)
 	{
@@ -89,8 +94,8 @@ ZRESULT ExtractZipToDir(LPCTSTR unzipSrcPath, LPCTSTR unzipDestPath)
 		}
 
 	}
-	CloseZip(hz);																			//Çå³ı»º´æ
-	printf("½âÑ¹%s\n", (zResult == 0 ? "³É¹¦" : "Ê§°Ü"));									//Debug
+	CloseZip(hz);																			//æ¸…é™¤ç¼“å­˜
+	printf("è§£å‹%s\n", (zResult == 0 ? "æˆåŠŸ" : "å¤±è´¥"));									//Debug
 	return zResult;
 }
 
@@ -101,11 +106,11 @@ ZRESULT ExtractZipToDir(LPCTSTR unzipSrcPath, LPCTSTR unzipDestPath)
 ********************************************************************************
 *
 *   FUNCTION NAME: GetDirPath
-*   Inputs       : vec				½âÑ¹Ô´ÎÄ¼şÃû
-*   Retrun Value : ret				½âÑ¹Ä¿±êÎÄ¼ş¼ĞÃû³Æ
+*   Inputs       : vec				è§£å‹æºæ–‡ä»¶å
+*   Retrun Value : ret				è§£å‹ç›®æ ‡æ–‡ä»¶å¤¹åç§°
 *
 *---------------------------------- PURPOSE -----------------------------------
-*  Í¨¹ıvectorÆ´½Ó¶à¼¶ÎÄ¼ş¼ĞÃû³ÆÎªÂ·¾¶Ãû³Æ
+*  é€šè¿‡vectoræ‹¼æ¥å¤šçº§æ–‡ä»¶å¤¹åç§°ä¸ºè·¯å¾„åç§°
 *******************************************************************************/
 std::wstring GetDirPath(std::vector<std::wstring>& vec)
 {
@@ -128,12 +133,12 @@ std::wstring GetDirPath(std::vector<std::wstring>& vec)
 ********************************************************************************
 *
 *   FUNCTION NAME: DirToZip
-*   Inputs       : srcPath				Ñ¹ËõÔ´ÎÄ¼ş¼ĞÃû³Æ
-*   Inputs		 : destPath				Ñ¹ËõÄ¿±êÎÄ¼şÃû³Æ				Èç¹ûÆäÎªNULLÔòÑ¹Ëõµ½Ô´ÎÄ¼şÃûÏàÍ¬µÄÄ¿±êÎ»ÖÃZIPÏÂ
-*	Outputs		 : hz					zip½á¹¹Ö¸Õë
-*   Retrun Value : ZRESULT				´íÎó´úÂë£¬µ±·µ»Ø½á¹ûÎª0Ê±£¬ÆäÎª³É¹¦
+*   Inputs       : srcPath				å‹ç¼©æºæ–‡ä»¶å¤¹åç§°
+*   Inputs		 : destPath				å‹ç¼©ç›®æ ‡æ–‡ä»¶åç§°				å¦‚æœå…¶ä¸ºNULLåˆ™å‹ç¼©åˆ°æºæ–‡ä»¶åç›¸åŒçš„ç›®æ ‡ä½ç½®ZIPä¸‹
+*	Outputs		 : hz					zipç»“æ„æŒ‡é’ˆ
+*   Retrun Value : ZRESULT				é”™è¯¯ä»£ç ï¼Œå½“è¿”å›ç»“æœä¸º0æ—¶ï¼Œå…¶ä¸ºæˆåŠŸ
 *---------------------------------- PURPOSE -----------------------------------
-*   µİ¹é½âÑ¹
+*   é€’å½’è§£å‹
 *******************************************************************************/
 ZRESULT DirToZip(LPCTSTR srcPath, LPCTSTR destPath, HZIP& hz)
 {
@@ -143,23 +148,23 @@ ZRESULT DirToZip(LPCTSTR srcPath, LPCTSTR destPath, HZIP& hz)
 	std::wstring formatPath = std::wstring(srcPath) + _T("\\*.*");
 	HANDLE file = FindFirstFile(formatPath.c_str(), &fileData);
 
-	FindNextFile(file, &fileData);																//Í¨¹ıÉ¨Ãè»ñÈ¡ÎÄ¼şĞÅÏ¢
+	FindNextFile(file, &fileData);																//é€šè¿‡æ‰«æè·å–æ–‡ä»¶ä¿¡æ¯
 	while (FindNextFile(file, &fileData))
 	{
-		if (fileData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)								//Èç¹ûÕâÊÇÒ»¸öÎÄ¼ş¼Ğ
+		if (fileData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)								//å¦‚æœè¿™æ˜¯ä¸€ä¸ªæ–‡ä»¶å¤¹
 		{
-			inZipPath.push_back(fileData.cFileName);											//¼ÓÈëµ½Ñ¹Ëõ°üÎÄ¼şµÄÂ·¾¶ÖĞ
+			inZipPath.push_back(fileData.cFileName);											//åŠ å…¥åˆ°å‹ç¼©åŒ…æ–‡ä»¶çš„è·¯å¾„ä¸­
 			std::wstring dirPath = GetDirPath(inZipPath);
-			ZipAddFolder(hz, dirPath.c_str());													//Ìí¼ÓÎÄ¼ş¼Ğ
-			std::wstring subPath = std::wstring(srcPath) + _T("\\") + fileData.cFileName;		//Æ´½Ó×ÓÂ·¾¶
-			DirToZip(subPath.c_str(), destPath, hz);											//µİ¹éµ÷ÓÃ ¼ÌĞø²é¿´×ÓÎÄ¼ş¼Ğ
+			ZipAddFolder(hz, dirPath.c_str());													//æ·»åŠ æ–‡ä»¶å¤¹
+			std::wstring subPath = std::wstring(srcPath) + _T("\\") + fileData.cFileName;		//æ‹¼æ¥å­è·¯å¾„
+			DirToZip(subPath.c_str(), destPath, hz);											//é€’å½’è°ƒç”¨ ç»§ç»­æŸ¥çœ‹å­æ–‡ä»¶å¤¹
 			inZipPath.pop_back();
 		}
 		else
 		{
-			std::wstring zipRelativePath = GetDirPath(inZipPath) + _T("\\") + fileData.cFileName;	//Ñ¹ËõÏà¶ÔÎ»ÖÃ
-			std::wstring filesPath = std::wstring(srcPath) + _T("\\") + fileData.cFileName;			//ÎÄ¼şÂ·¾¶
-			ZipAdd(hz, zipRelativePath.c_str(), filesPath.c_str());									//±£´æµ½µ±Ç°Â·¾¶ÖĞ
+			std::wstring zipRelativePath = GetDirPath(inZipPath) + _T("\\") + fileData.cFileName;	//å‹ç¼©ç›¸å¯¹ä½ç½®
+			std::wstring filesPath = std::wstring(srcPath) + _T("\\") + fileData.cFileName;			//æ–‡ä»¶è·¯å¾„
+			ZipAdd(hz, zipRelativePath.c_str(), filesPath.c_str());									//ä¿å­˜åˆ°å½“å‰è·¯å¾„ä¸­
 			if (zResult != ZR_OK)
 			{
 				return zResult;
@@ -179,25 +184,25 @@ ZRESULT DirToZip(LPCTSTR srcPath, LPCTSTR destPath, HZIP& hz)
 ********************************************************************************
 *
 *   FUNCTION NAME: CompressDirToZip
-*   Inputs       : zipSrcPath				Ñ¹ËõÔ´ÎÄ¼ş¼ĞÃû³Æ
-*   Inputs		 : zipDestPath				Ñ¹ËõÄ¿±êÎÄ¼şÃû³Æ				Èç¹ûÆäÎªNULLÔòÑ¹Ëõµ½Ô´ÎÄ¼şÃûÏàÍ¬µÄÄ¿±êÎ»ÖÃZIPÏÂ
-*   Retrun Value : ZRESULT					´íÎó´úÂë£¬µ±·µ»Ø½á¹ûÎª0Ê±£¬ÆäÎª³É¹¦
+*   Inputs       : zipSrcPath				å‹ç¼©æºæ–‡ä»¶å¤¹åç§°
+*   Inputs		 : zipDestPath				å‹ç¼©ç›®æ ‡æ–‡ä»¶åç§°				å¦‚æœå…¶ä¸ºNULLåˆ™å‹ç¼©åˆ°æºæ–‡ä»¶åç›¸åŒçš„ç›®æ ‡ä½ç½®ZIPä¸‹
+*   Retrun Value : ZRESULT					é”™è¯¯ä»£ç ï¼Œå½“è¿”å›ç»“æœä¸º0æ—¶ï¼Œå…¶ä¸ºæˆåŠŸ
 *---------------------------------- PURPOSE -----------------------------------
-*  ¶ÔÄ¿±êÎÄ¼ş¼Ğ½øĞĞÑ¹Ëõ
+*  å¯¹ç›®æ ‡æ–‡ä»¶å¤¹è¿›è¡Œå‹ç¼©
 *******************************************************************************/
 ZRESULT CompressDirToZip(LPCTSTR zipSrcPath, LPCTSTR zipDestPath)
 {
 #ifndef _UNICODE 
-	// ÅĞ¶ÏÎÄ¼şÊÇ·ñ´æÔÚ
+	// åˆ¤æ–­æ–‡ä»¶æ˜¯å¦å­˜åœ¨
 	if (_access(unzipSrcPath, 0))
 	{
-		printf("Ô´Ä¿Â¼²»´æÔÚ£¬Ñ¹ËõÊ§°Ü\n");
+		printf("æºç›®å½•ä¸å­˜åœ¨ï¼Œå‹ç¼©å¤±è´¥\n");
 		return ZR_NOFILE;
 	}
 #else
 	if (_waccess(zipSrcPath, 0))
 	{
-		printf("Ô´Ä¿Â¼²»´æÔÚ£¬Ñ¹ËõÊ§°Ü\n");
+		printf("æºç›®å½•ä¸å­˜åœ¨ï¼Œå‹ç¼©å¤±è´¥\n");
 		return ZR_NOFILE;
 	}
 #endif
@@ -208,18 +213,18 @@ ZRESULT CompressDirToZip(LPCTSTR zipSrcPath, LPCTSTR zipDestPath)
 	
 	std::wstring strDestPath;
 	inZipPath.clear();
-	if (zipDestPath)																		//¶ÔÄ¿±êÄ¿Â¼½øĞĞ´¦Àí
+	if (zipDestPath)																		//å¯¹ç›®æ ‡ç›®å½•è¿›è¡Œå¤„ç†
 	{
 		strDestPath = zipDestPath;
 		int pos = strDestPath.rfind(_T("\\"));
-		if (pos != std::wstring::npos)														//Èç¹û°üº¬Â·¾¶ÔòÈ¡³öÂ·¾¶
+		if (pos != std::wstring::npos)														//å¦‚æœåŒ…å«è·¯å¾„åˆ™å–å‡ºè·¯å¾„
 		{
 			if (strDestPath.rfind(_T(".zip")) != std::string::npos)
 			{
 				zipNameStr = strDestPath.substr(pos + 1);
 				strDestPath = strDestPath.substr(0, pos);
 			}
-			SHCreateDirectoryEx(NULL, strDestPath.c_str(), NULL);							 //Èç¹û²»°üº¬ÔòÒÑ¾­ÔÚµ±Ç°Ä¿Â¼ÏÂÎŞĞè´´½¨ÎÄ¼ş¼Ğ
+			SHCreateDirectoryEx(NULL, strDestPath.c_str(), NULL);							 //å¦‚æœä¸åŒ…å«åˆ™å·²ç»åœ¨å½“å‰ç›®å½•ä¸‹æ— éœ€åˆ›å»ºæ–‡ä»¶å¤¹
 		}
 
 	}
@@ -230,9 +235,9 @@ ZRESULT CompressDirToZip(LPCTSTR zipSrcPath, LPCTSTR zipDestPath)
 		strDestPath = buffer;
 	}
 
-	std::wstring srcStrPath = zipSrcPath;													//¶ÔÔ´Ä¿Â¼½øĞĞ³öÂ·
+	std::wstring srcStrPath = zipSrcPath;													//å¯¹æºç›®å½•è¿›è¡Œå‡ºè·¯
 	std::wstring rootFolderName = _T("");
-	int pos = srcStrPath.rfind(_T('\\'));													//»ñÈ¡´ıÑ¹ËõÎÄ¼ş¼Ğ×îºóÒ»²ãµÄÎÄ¼şÃû
+	int pos = srcStrPath.rfind(_T('\\'));													//è·å–å¾…å‹ç¼©æ–‡ä»¶å¤¹æœ€åä¸€å±‚çš„æ–‡ä»¶å
 	if (pos != std::wstring::npos)
 	{
 		rootFolderName = srcStrPath.substr(pos + 1);
@@ -241,15 +246,15 @@ ZRESULT CompressDirToZip(LPCTSTR zipSrcPath, LPCTSTR zipDestPath)
 	{
 		rootFolderName = zipSrcPath;
 	}
-	inZipPath.push_back(rootFolderName);													//½«¸ùÎÄ¼ş¼ĞµÄÄ¿Â¼·ÅÈëzipÂ·¾¶
+	inZipPath.push_back(rootFolderName);													//å°†æ ¹æ–‡ä»¶å¤¹çš„ç›®å½•æ”¾å…¥zipè·¯å¾„
 	if (zipNameStr.empty())
 		zipNameStr = rootFolderName + _T(".zip");
 	std::wstring zipPath;
-	zipPath = strDestPath + _T("\\") + zipNameStr;											//µ±Ä¿±êÎÄ¼şÃûÎª¿ÕÊ±ÒòÎªÉÏÎÄÖ»´´½¨ÁËÂ·¾¶£¬ËùÒÔÒªÌí¼ÓÎÄ¼şÃû
+	zipPath = strDestPath + _T("\\") + zipNameStr;											//å½“ç›®æ ‡æ–‡ä»¶åä¸ºç©ºæ—¶å› ä¸ºä¸Šæ–‡åªåˆ›å»ºäº†è·¯å¾„ï¼Œæ‰€ä»¥è¦æ·»åŠ æ–‡ä»¶å
 	hz = CreateZip(zipPath.c_str(), 0);
-	ZipAddFolder(hz, rootFolderName.c_str());												//ÔÚÑ¹Ëõ°üÖĞÌí¼Ó¸ùÄ¿Â¼
+	ZipAddFolder(hz, rootFolderName.c_str());												//åœ¨å‹ç¼©åŒ…ä¸­æ·»åŠ æ ¹ç›®å½•
 	zResult = DirToZip(zipSrcPath, zipDestPath, hz);
-	printf("Ñ¹Ëõ%s\n", (zResult == 0 ? "³É¹¦" : "Ê§°Ü"));									//Debug
+	printf("å‹ç¼©%s\n", (zResult == 0 ? "æˆåŠŸ" : "å¤±è´¥"));									//Debug
 	CloseZip(hz);
 
 	return zResult;
@@ -264,11 +269,11 @@ ZRESULT CompressDirToZip(LPCTSTR zipSrcPath, LPCTSTR zipDestPath)
 ********************************************************************************
 *
 *   FUNCTION NAME: CharToWChar
-*   Inputs       : str				Ô´×Ö·û´®
-*   Retrun Value : wchar_t*			¿í×Ö·û´®
+*   Inputs       : str				æºå­—ç¬¦ä¸²
+*   Retrun Value : wchar_t*			å®½å­—ç¬¦ä¸²
 *
 *---------------------------------- PURPOSE -----------------------------------
-*  ¶ÔzipÎÄ¼ş½øĞĞ½âÑ¹
+*  å¯¹zipæ–‡ä»¶è¿›è¡Œè§£å‹
 *******************************************************************************/
 wchar_t* CharToWChar(const char *str)
 {
@@ -294,18 +299,18 @@ wchar_t* CharToWChar(const char *str)
 ********************************************************************************
 *
 *   FUNCTION NAME: ExtractZipToDir
-*   Inputs       : unzipSrcPath		zipÎÄ¼şÂ·¾¶
-*   Inputs       : unzipDestPath	½âÑ¹Â·¾¶	Èç¹û´«ÈëNULL Ôò½âÑ¹µ½µ±Ç°Ä¿Â¼
-*   Retrun Value : ZRESULT			´íÎó´úÂë£¬µ±·µ»Ø½á¹ûÎª0Ê±£¬ÆäÎª³É¹¦
+*   Inputs       : unzipSrcPath		zipæ–‡ä»¶è·¯å¾„
+*   Inputs       : unzipDestPath	è§£å‹è·¯å¾„	å¦‚æœä¼ å…¥NULL åˆ™è§£å‹åˆ°å½“å‰ç›®å½•
+*   Retrun Value : ZRESULT			é”™è¯¯ä»£ç ï¼Œå½“è¿”å›ç»“æœä¸º0æ—¶ï¼Œå…¶ä¸ºæˆåŠŸ
 *
 *---------------------------------- PURPOSE -----------------------------------
-*  ¶ÔzipÎÄ¼ş½øĞĞ½âÑ¹
+*  å¯¹zipæ–‡ä»¶è¿›è¡Œè§£å‹
 *******************************************************************************/
-ZRESULT ExtractZipToDir(const char* unzipSrcPath, const char* unzipDestPath)
+ZRESULT ExtractZipToDir(const char* unzipSrcPath, const char* unzipDestPath, std::string unzipPassword)
 {
 	LPCTSTR wunzipSrcPath = CharToWChar(unzipSrcPath);
 	LPCTSTR wunzipDestPath = CharToWChar(unzipDestPath);
-	ZRESULT ret=ExtractZipToDir(wunzipSrcPath, wunzipDestPath);
+	ZRESULT ret=ExtractZipToDir(wunzipSrcPath, wunzipDestPathï¼ŒunzipPassword);
 	delete (wchar_t*)wunzipDestPath;
 	delete (wchar_t*)wunzipSrcPath;
 	return ret;
@@ -325,18 +330,18 @@ ZRESULT CompressDirToZip(std::vector<std::string> vzipSrcPath, const char* czipD
 	
 
 	std::wstring strDestPath;
-	if (zipDestPath)																		//¶ÔÄ¿±êÄ¿Â¼½øĞĞ´¦Àí
+	if (zipDestPath)																		//å¯¹ç›®æ ‡ç›®å½•è¿›è¡Œå¤„ç†
 	{
 		strDestPath = zipDestPath;
 		int pos = strDestPath.rfind(_T("\\"));
-		if (pos != std::wstring::npos)														//Èç¹û°üº¬Â·¾¶ÔòÈ¡³öÂ·¾¶
+		if (pos != std::wstring::npos)														//å¦‚æœåŒ…å«è·¯å¾„åˆ™å–å‡ºè·¯å¾„
 		{
 			if (strDestPath.rfind(_T(".zip")) != std::string::npos)
 			{
 				zipNameStr = strDestPath.substr(pos + 1);
 				strDestPath = strDestPath.substr(0, pos);
 			}
-			SHCreateDirectoryEx(NULL, strDestPath.c_str(), NULL);							 //Èç¹û²»°üº¬ÔòÒÑ¾­ÔÚµ±Ç°Ä¿Â¼ÏÂÎŞĞè´´½¨ÎÄ¼ş¼Ğ
+			SHCreateDirectoryEx(NULL, strDestPath.c_str(), NULL);							 //å¦‚æœä¸åŒ…å«åˆ™å·²ç»åœ¨å½“å‰ç›®å½•ä¸‹æ— éœ€åˆ›å»ºæ–‡ä»¶å¤¹
 		}
 
 	}
@@ -345,7 +350,7 @@ ZRESULT CompressDirToZip(std::vector<std::string> vzipSrcPath, const char* czipD
 		GetCurrentDirectory(MAX_PATH, (LPTSTR)&buffer);
 		strDestPath = buffer;
 	}
-	tmp = strDestPath + _T("\\") + zipNameStr;												//µ±Ä¿±êÎÄ¼şÃûÎª¿ÕÊ±ÒòÎªÉÏÎÄÖ»´´½¨ÁËÂ·¾¶£¬ËùÒÔÒªÌí¼ÓÎÄ¼şÃû
+	tmp = strDestPath + _T("\\") + zipNameStr;												//å½“ç›®æ ‡æ–‡ä»¶åä¸ºç©ºæ—¶å› ä¸ºä¸Šæ–‡åªåˆ›å»ºäº†è·¯å¾„ï¼Œæ‰€ä»¥è¦æ·»åŠ æ–‡ä»¶å
 	hz = CreateZip(tmp.c_str(), 0);
 
 
@@ -356,23 +361,23 @@ ZRESULT CompressDirToZip(std::vector<std::string> vzipSrcPath, const char* czipD
 		LPCTSTR zipSrcPath=CharToWChar(vzipSrcPath[i].c_str());
 
 #ifndef _UNICODE 
-		// ÅĞ¶ÏÎÄ¼şÊÇ·ñ´æÔÚ
+		// åˆ¤æ–­æ–‡ä»¶æ˜¯å¦å­˜åœ¨
 		if (_access(zipSrcPath, 0))
 		{
-			printf("Ô´Ä¿Â¼²»´æÔÚ£¬Ñ¹ËõÊ§°Ü\n");
+			printf("æºç›®å½•ä¸å­˜åœ¨ï¼Œå‹ç¼©å¤±è´¥\n");
 			return ZR_NOFILE;
 		}
 #else
 		if (_waccess(zipSrcPath, 0))
 		{
-			printf("Ô´Ä¿Â¼²»´æÔÚ£¬Ñ¹ËõÊ§°Ü\n");
+			printf("æºç›®å½•ä¸å­˜åœ¨ï¼Œå‹ç¼©å¤±è´¥\n");
 			return ZR_NOFILE;
 		}
 #endif
 
-		std::wstring srcStrPath = zipSrcPath;													//¶ÔÔ´Ä¿Â¼½øĞĞ³öÂ·
+		std::wstring srcStrPath = zipSrcPath;													//å¯¹æºç›®å½•è¿›è¡Œå‡ºè·¯
 		std::wstring rootFolderName = _T("");
-		int pos = srcStrPath.rfind(_T('\\'));													//»ñÈ¡´ıÑ¹ËõÎÄ¼ş¼Ğ×îºóÒ»²ãµÄÎÄ¼şÃû
+		int pos = srcStrPath.rfind(_T('\\'));													//è·å–å¾…å‹ç¼©æ–‡ä»¶å¤¹æœ€åä¸€å±‚çš„æ–‡ä»¶å
 		if (pos != std::wstring::npos)
 		{
 			rootFolderName = srcStrPath.substr(pos + 1);
@@ -381,11 +386,11 @@ ZRESULT CompressDirToZip(std::vector<std::string> vzipSrcPath, const char* czipD
 		{
 			rootFolderName = zipSrcPath;
 		}
-		inZipPath.push_back(rootFolderName);													//½«¸ùÎÄ¼ş¼ĞµÄÄ¿Â¼·ÅÈëzipÂ·¾¶
+		inZipPath.push_back(rootFolderName);													//å°†æ ¹æ–‡ä»¶å¤¹çš„ç›®å½•æ”¾å…¥zipè·¯å¾„
 
-		ZipAddFolder(hz, rootFolderName.c_str());												//ÔÚÑ¹Ëõ°üÖĞÌí¼Ó¸ùÄ¿Â¼
+		ZipAddFolder(hz, rootFolderName.c_str());												//åœ¨å‹ç¼©åŒ…ä¸­æ·»åŠ æ ¹ç›®å½•
 		zResult = DirToZip(zipSrcPath, zipDestPath, hz);
-		printf("Ñ¹Ëõ%s\n", (zResult == 0 ? "³É¹¦" : "Ê§°Ü"));									//Debug
+		printf("å‹ç¼©%s\n", (zResult == 0 ? "æˆåŠŸ" : "å¤±è´¥"));									//Debug
 
 		delete zipSrcPath;
 
@@ -407,11 +412,11 @@ ZRESULT CompressDirToZip(std::vector<std::string> vzipSrcPath, const char* czipD
 ********************************************************************************
 *
 *   FUNCTION NAME: CompressDirToZip
-*   Inputs       : zipSrcPath				Ñ¹ËõÔ´ÎÄ¼ş¼ĞÃû³Æ
-*   Inputs		 : zipDestPath				Ñ¹ËõÄ¿±êÎÄ¼şÃû³Æ				Èç¹ûÆäÎªNULLÔòÑ¹Ëõµ½Ô´ÎÄ¼şÃûÏàÍ¬µÄÄ¿±êÎ»ÖÃZIPÏÂ
-*   Retrun Value : ZRESULT					´íÎó´úÂë£¬µ±·µ»Ø½á¹ûÎª0Ê±£¬ÆäÎª³É¹¦
+*   Inputs       : zipSrcPath				å‹ç¼©æºæ–‡ä»¶å¤¹åç§°
+*   Inputs		 : zipDestPath				å‹ç¼©ç›®æ ‡æ–‡ä»¶åç§°				å¦‚æœå…¶ä¸ºNULLåˆ™å‹ç¼©åˆ°æºæ–‡ä»¶åç›¸åŒçš„ç›®æ ‡ä½ç½®ZIPä¸‹
+*   Retrun Value : ZRESULT					é”™è¯¯ä»£ç ï¼Œå½“è¿”å›ç»“æœä¸º0æ—¶ï¼Œå…¶ä¸ºæˆåŠŸ
 *---------------------------------- PURPOSE -----------------------------------
-*  ¶ÔÄ¿±êÎÄ¼ş¼Ğ½øĞĞÑ¹Ëõ
+*  å¯¹ç›®æ ‡æ–‡ä»¶å¤¹è¿›è¡Œå‹ç¼©
 *******************************************************************************/
 ZRESULT CompressDirToZip(const char* zipSrcPath, const char* zipDestPath)
 {
@@ -434,10 +439,10 @@ ZRESULT CompressDirToZip(const char* zipSrcPath, const char* zipDestPath)
 ********************************************************************************
 *
 *   FUNCTION NAME: GetZipErrorMessage
-*   Inputs       : code				´íÎó´úÂë
-*   Retrun Value : string			´íÎóĞÅÏ¢
+*   Inputs       : code				é”™è¯¯ä»£ç 
+*   Retrun Value : string			é”™è¯¯ä¿¡æ¯
 *---------------------------------- PURPOSE -----------------------------------
-*  »ñÈ¡ZIP´íÎóĞÅÏ¢
+*  è·å–ZIPé”™è¯¯ä¿¡æ¯
 *******************************************************************************/
 std::string GetZipErrorMessage(ZRESULT code)
 {
@@ -456,10 +461,10 @@ std::string GetZipErrorMessage(ZRESULT code)
 ********************************************************************************
 *
 *   FUNCTION NAME: SetZipEncode
-*   Inputs       : mode				±àÂë·½Ê½ ²ÎÕÕZipDefine.h
+*   Inputs       : mode				ç¼–ç æ–¹å¼ å‚ç…§ZipDefine.h
 *   Retrun Value : 
 *---------------------------------- PURPOSE -----------------------------------
-*   ÉèÖÃZipµÄ±àÂë·½Ê½
+*   è®¾ç½®Zipçš„ç¼–ç æ–¹å¼
 *******************************************************************************/
 void SetZipEncode(int mode)
 {
